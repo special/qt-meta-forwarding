@@ -7,6 +7,8 @@ SignalInterceptor::SignalInterceptor(QObject *t, QObject *parent)
 {
     const QMetaObject *tm = target.data()->metaObject();
 
+    addSignal("signal(QByteArray,QVariantList)", "signature,parameters");
+
     /* Add slots mirroring all signals from the target object */
     for (int i = 0; i < tm->methodCount(); ++i)
     {
@@ -53,9 +55,18 @@ void SignalInterceptor::metaMethodCall(const QMetaMethod &method, QVariantList p
     if (!target)
         return;
 
+#ifndef QT_NO_DEBUG
     qDebug() << "SignalInterceptor:" << target.data() << "signal" << method.signature();
 
     QList<QByteArray> names = method.parameterNames();
     for (int i = 0; i < parameters.size(); ++i)
         qDebug() << "SignalInterceptor:  " << names[i] << parameters[i];
+#endif
+
+    QByteArray signal = method.signature();
+    signal.remove(0, qstrlen("intercept_"));
+
+    QVariantList sp;
+    sp << signal << QVariant(parameters);
+    emitSignal("signal(QByteArray,QVariantList)", sp);
 }

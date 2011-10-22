@@ -197,3 +197,27 @@ void DynamicQObject::metaMethodCall(const QMetaMethod &method, QVariantList para
     Q_UNUSED(method);
     Q_UNUSED(parameters);
 }
+
+bool DynamicQObject::emitSignal(const char *signature, QVariantList parameters)
+{
+    int index = metaObject()->indexOfSignal(QMetaObject::normalizedSignature(signature).constData());
+    if (index < 0)
+        return false;
+
+    emitSignal(index, parameters);
+    return true;
+}
+
+void DynamicQObject::emitSignal(int index, QVariantList parameters)
+{
+    index -= QObject::staticMetaObject.methodCount();
+
+    void **a = new void*[parameters.size()+1];
+    a[0] = 0;
+    for (int i = 0; i < parameters.size(); ++i)
+        a[i+1] = parameters[i].data();
+
+    QMetaObject::activate(this, metaObject(), index, a);
+
+    delete[] a;
+}

@@ -37,6 +37,9 @@ public:
 
     void addMethod(const char *signature, const char *parameterNames, uint flags);
 
+    bool emitSignal(const char *signature, QVariantList parameters);
+    void emitSignal(int index, QVariantList parameters);
+
 protected:
 
     /* Called when meta-methods created in this class are invoked. The base class
