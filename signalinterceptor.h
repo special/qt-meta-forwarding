@@ -1,27 +1,19 @@
 #ifndef SIGNALINTERCEPTOR_H
 #define SIGNALINTERCEPTOR_H
 
-#include <QObject>
+#include "dynamicqobject.h"
+#include <QWeakPointer>
 
-class SignalInterceptor : public QObject
+class SignalInterceptor : public DynamicQObject
 {
 public:
     explicit SignalInterceptor(QObject *target, QObject *parent = 0);
-    virtual ~SignalInterceptor();
 
-    /* MOC */
-    static const QMetaObjectExtraData staticMetaObjectExtraData;
-    static void qt_static_metacall(QObject *, QMetaObject::Call, int, void **);
-    virtual const QMetaObject *metaObject() const;
-    virtual void *qt_metacast(const char *);
-    virtual int qt_metacall(QMetaObject::Call, int, void **);
+protected:
+    virtual void metaMethodCall(const QMetaMethod &method, QVariantList parameters);
 
 private:
-    QMetaObject dynamicMetaObject;
-    QByteArray string_data;
-    uint *meta_data;
-
-    void handle_metacall(int id, void **a);
+    QWeakPointer<QObject> target;
 };
 
 #endif // SIGNALINTERCEPTOR_H
