@@ -1,0 +1,6 @@
+*.o
+Makefile
+*.app
+.DS_Store
+*.user
+moc_*.cpp
