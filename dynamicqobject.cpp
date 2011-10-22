@@ -1,6 +1,7 @@
 #include "dynamicqobject.h"
 #include <QMetaMethod>
 #include <QDebug>
+#include <QDataStream>
 
 const QMetaObjectExtraData DynamicQObject::staticMetaObjectExtraData = {
     0, qt_static_metacall
@@ -220,4 +221,92 @@ void DynamicQObject::emitSignal(int index, QVariantList parameters)
     QMetaObject::activate(this, metaObject(), index, a);
 
     delete[] a;
+}
+
+QByteArray DynamicQObject::encodeObject(QObject *object, EncodedMetaTypes types)
+{
+    if (!object)
+        return QByteArray();
+
+    QByteArray re;
+    QDataStream d(&re, QIODevice::WriteOnly);
+
+    const QMetaObject *mo = object->metaObject();
+
+    d << mo->className();
+
+    /* Skip QObject methods */
+    for (int i = QObject::staticMetaObject.methodCount(); i < mo->methodCount(); ++i)
+    {
+        QMetaMethod m = mo->method(i);
+        if ((m.methodType() == QMetaMethod::Signal && (types & EncodeSignals)) ||
+            (m.methodType() == QMetaMethod::Slot && (types & EncodeSlots)))
+        {
+            d << m.methodType();
+            d << m.signature();
+
+            QByteArray parameters;
+            QList<QByteArray> pl = m.parameterNames();
+            foreach (QByteArray p, pl) {
+                parameters.append(p);
+                parameters.append(',');
+            }
+            if (!parameters.isEmpty())
+                parameters.chop(1);
+
+            d << parameters;
+        }
+    }
+
+    d << -1;
+
+    return re;
+}
+
+DynamicQObject *DynamicQObject::createFromEncodedObject(const QByteArray &encoded)
+{
+    QDataStream d(encoded);
+
+    QByteArray className;
+    d >> className;
+
+    DynamicQObject *obj = new DynamicQObject(className.constData());
+
+    for (;;)
+    {
+        int type = -1;
+        d >> type;
+        if (type < 0)
+            break;
+
+        QByteArray signature;
+        QByteArray parameters;
+        d >> signature >> parameters;
+
+        if (signature.isEmpty())
+            break;
+
+        switch (type)
+        {
+        case QMetaMethod::Signal:
+            obj->addSignal(signature.constData(), parameters.constData());
+            break;
+        case QMetaMethod::Slot:
+            obj->addSlot(signature.constData(), parameters.constData());
+            break;
+        default:
+            qDebug() << "DynamicQObject: Skipping unsupported type" << type <<
+                        "from encoded object of type" << className;
+        }
+    }
+
+    qDebug() << "DynamicQObject: Created from encoded object of type" << className;
+
+    for (int i = 0; i < obj->metaObject()->methodCount(); ++i)
+    {
+        QMetaMethod m = obj->metaObject()->method(i);
+        qDebug() << "DynamicQObject:   " << i << m.methodType() << m.signature();
+    }
+
+    return obj;
 }

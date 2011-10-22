@@ -24,6 +24,13 @@
 class DynamicQObject : public QObject
 {
 public:
+    enum EncodedMetaType
+    {
+        EncodeSignals = 1,
+        EncodeSlots = 1 << 1
+    };
+    Q_DECLARE_FLAGS(EncodedMetaTypes, EncodedMetaType)
+
     explicit DynamicQObject(const char *classname, QObject *parent = 0);
 
     /* Add a slot with the given signature, which should NOT be created
@@ -39,6 +46,9 @@ public:
 
     bool emitSignal(const char *signature, QVariantList parameters);
     void emitSignal(int index, QVariantList parameters);
+
+    static QByteArray encodeObject(QObject *object, EncodedMetaTypes types);
+    static DynamicQObject *createFromEncodedObject(const QByteArray &encoded);
 
 protected:
 

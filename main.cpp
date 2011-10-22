@@ -17,6 +17,11 @@ public slots:
     {
         qDebug() << "Signal intercepted:" << signature;
     }
+
+    void printString(const QString &str)
+    {
+        qDebug() << "A string! :" << str;
+    }
 };
 
 int main(int argc, char **argv)
@@ -36,6 +41,18 @@ int main(int argc, char **argv)
     QObject::connect(ic, SIGNAL(signal(QByteArray,QVariantList)), debug, SLOT(signalReceived(QByteArray,QVariantList)));
 
     src->sendSignals();
+
+    QByteArray encoded = DynamicQObject::encodeObject(src, DynamicQObject::EncodeSignals);
+    qDebug() << encoded.toHex();
+
+    DynamicQObject *recreated = DynamicQObject::createFromEncodedObject(encoded);
+    qDebug() << recreated;
+
+    QObject::connect(recreated, SIGNAL(stringSignal(QString)), debug, SLOT(printString(QString)));
+
+    QVariantList vl;
+    vl << QVariant(QString("test"));
+    recreated->emitSignal("stringSignal(QString)", vl);
 }
 
 #include "main.moc"
