@@ -169,10 +169,18 @@ int DynamicQObject::qt_metacall(QMetaObject::Call c, int id, void **a)
 
 void DynamicQObject::handle_metacall(int id, void **a)
 {
+    int localid = id;
     id += QObject::staticMetaObject.methodCount();
     QMetaMethod method = metaObject()->method(id);
-    QVariantList parameters;
 
+    if (method.methodType() == QMetaMethod::Signal)
+    {
+        /* Metacalls to a signal emit that signal. */
+        QMetaObject::activate(this, metaObject(), localid, a);
+        return;
+    }
+
+    QVariantList parameters;
     QList<QByteArray> types = method.parameterTypes();
     for (int i = 0; i < types.size(); ++i)
     {
